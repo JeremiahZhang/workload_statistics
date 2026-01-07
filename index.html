@@ -1,916 +1,993 @@
-import React, { useState } from 'react';
-import { 
-  Plus, Trash2, Calculator, Save, FileText, Briefcase, 
-  GraduationCap, Beaker, Wrench, 
-  Clock, CheckSquare, Layout, Download, FileSpreadsheet, User, CheckCircle,
-  Users, BookOpen, PenTool, Mic, AlertCircle, Coffee
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师工作量核算系统</title>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用于解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        /* 简单的淡入动画配置 */
+        .animate-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
 
-const WorkloadCalculator = () => {
-  const [activeTab, setActiveTab] = useState('teaching');
-  const [showToast, setShowToast] = useState(false);
-  
-  // 用户信息
-  const [userInfo, setUserInfo] = useState({
-    name: '',
-    title: '',
-    employeeId: '' // 工号
-  });
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-  // --- 状态管理 ---
+        // --- 图标组件定义 (SVG) ---
+        const IconBase = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
 
-  // 1. 理论与实验课程数据
-  const [courses, setCourses] = useState([
-    {
-      id: 1,
-      semester: '下半年',
-      name: '交通工程学',
-      className: '23交通1班',
-      courseNature: 'general', // general: 一般课, integrated: 理实一体课
-      students: 45,
-      theoryHours: 48,
-      labHoursPerBatch: 8, 
-      labBatches: 2,       
-      examType: 'exam',    
-      isRepeat: false,     
-      isDrawing: false,    
-      newCourseType: 'none', // none: 非新课(1.0), personal: 个人新开(1.1), college: 学院新开(1.2)
-      remarks: ''
-    }
-  ]);
+        const Calculator = (props) => <IconBase {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
+        const Briefcase = (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+        const Layout = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></IconBase>;
+        const Save = (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
+        const Plus = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>;
+        const GraduationCap = (props) => <IconBase {...props}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></IconBase>;
+        const Beaker = (props) => <IconBase {...props}><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><line x1="6" x2="18" y1="11" y2="11"/></IconBase>;
+        const Wrench = (props) => <IconBase {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></IconBase>;
+        const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
+        const CheckSquare = (props) => <IconBase {...props}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>;
+        const FileSpreadsheet = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></IconBase>;
+        const User = (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const PenTool = (props) => <IconBase {...props}><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></IconBase>;
+        const Mic = (props) => <IconBase {...props}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="23"/><line x1="8" x2="16" y1="23" y2="23"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
 
-  // 2. 实训课程数据
-  const [trainingCourses, setTrainingCourses] = useState([
-    {
-      id: 101,
-      semester: '下半年',
-      name: '认识实习',
-      className: '23交通全级',
-      hours: 16, 
-      hasGrades: false, 
-      remarks: ''
-    }
-  ]);
-
-  // 3. 毕业设计数据
-  const [gradDesign, setGradDesign] = useState({
-    defendedCount: '0',     
-    noDefenseCount: '0',    
-    schoolExcellent: '0',   
-    provRecommended: '0',   
-    provExcellent: '0',     
-    baseHours: 8,         
-    coeffNoDefense: 0.5,
-    coeffSchool: 1.2,
-    coeffProvRec: 2.0,
-    coeffProvExc: 3.0
-  });
-
-  // 4. 非教学工作量数据
-  const [nonTeaching, setNonTeaching] = useState({
-    // 一、政治和业务学习 (基准20)
-    polStudyAbsence: '',      // 政治学习缺席(因私) -0.5
-    meetingAttendGeneral: '', // 参加会议(一般) +1
-    meetingAttendRole: '',    // 参加会议(指定角色) +0.5
-    meetingAbsence: '',       // 会议缺席(不请假) -1
-    
-    // 二、业务工作
-    newStandards: '',    // 新编课程标准(个) 2分
-    peerReviews: '',     // 听课评教(次) 0.5分
-    teachingSeminars: '',// 教学研讨(次) 1分
-    internshipStudents: '', // 指导顶岗实习(人数) -> 计算: 人数*0.1
-    
-    gradDefense: '',     // 毕业答辩 (分数)
-    continuingEd: '',    // 继续教育 (总分)
-    onlinePatrol: '',    // 线上巡课 (总分)
-    skillCompOrg: '',    // 组织竞赛活动 (总分)
-    skillTestOrg: '',    // 组织考工 (总分)
-    baseConstruction: '',// 实训基地建设 (总分)
-    researchProcess: '', // 教科研过程分 (总分)
-
-    // 三、党务及学生管理
-    classTeacher: '',    // 班主任日常管理
-    studentLectures: '', // 组织学生讲座
-    clubGuide: '',       // 指导社团
-    largeEvents: '',     // 大型学生活动
-    dormManagement: '',  // 宿舍管理
-    employmentWork: '',  // 就创业工作
-    partyWork: '',       // 党务工作
-    unionActivity: '',   // 工会活动
-
-    // 四~八
-    schoolEntCoop: '',   // 校企合作工作
-    externalTraining: '', // 校外培训创收
-    deptAffairs: '',      // 部门事务
-    otherWork: '',       // 基地上课等
-    deductions: ''       // 抵扣
-  });
-
-  // --- 计算逻辑 ---
-
-  const calculateK1 = (n) => {
-    const num = parseInt(n) || 0;
-    if (num >= 50) {
-      let val = 1 + (num - 50) / 100;
-      return Math.min(1.7, val);
-    } else {
-      let val = 1 + (num - 50) / 300;
-      return Math.max(0.9, val);
-    }
-  };
-
-  const calculateExamHours = (type) => {
-    switch (type) {
-      case 'exam': return 5;
-      case 'test_in': return 3;
-      case 'test_out': return 5;
-      default: return 0;
-    }
-  };
-
-  const calculateRow = (course) => {
-    const k1 = calculateK1(course.students);
-    const k2 = course.isRepeat ? 0.8 : 1.0;
-    const k3 = course.isDrawing ? 1.1 : 1.0;
-    
-    let k4 = 1.0;
-    if (course.newCourseType === 'college') k4 = 1.2;
-    if (course.newCourseType === 'personal') k4 = 1.1;
-    if (course.isRepeat) k4 = 1.0;
-
-    const examHours = calculateExamHours(course.examType);
-    const theoryBase = (parseFloat(course.theoryHours) || 0) + examHours;
-    const theoryWorkload = theoryBase * k1 * k2 * k3 * k4;
-    
-    const labPerBatch = parseFloat(course.labHoursPerBatch) || 0;
-    const batches = parseFloat(course.labBatches) || 0;
-    let labWorkload = 0;
-    if (batches > 0) {
-      const batchCoeff = 1 + (batches - 1) * 0.7;
-      labWorkload = labPerBatch * batchCoeff;
-    }
-
-    return {
-      k1: k1.toFixed(3),
-      k2, k3, k4,
-      examHours,
-      theoryWorkload,
-      labWorkload,
-      total: theoryWorkload + labWorkload
-    };
-  };
-
-  const calculateTrainingRow = (course) => {
-    const hours = parseFloat(course.hours) || 0;
-    let base = hours / 2;
-    if (course.hasGrades) {
-      base += 3;
-    }
-    return base;
-  };
-
-  const calculateGradTotal = () => {
-    const base = ((parseFloat(gradDesign.defendedCount) || 0) * 1.0 + (parseFloat(gradDesign.noDefenseCount) || 0) * gradDesign.coeffNoDefense) * gradDesign.baseHours;
-    const bonus = (
-      ((parseFloat(gradDesign.schoolExcellent) || 0) * (gradDesign.coeffSchool - 1)) + 
-      ((parseFloat(gradDesign.provRecommended) || 0) * (gradDesign.coeffProvRec - 1)) + 
-      ((parseFloat(gradDesign.provExcellent) || 0) * (gradDesign.coeffProvExc - 1))
-    ) * gradDesign.baseHours;
-    return base + bonus;
-  };
-
-  // 分类计算函数 (用于汇总展示)
-  const calculateCategories = () => {
-    // 1. 政治业务学习 (基准20)
-    const section1 = 20 
-      - ((parseFloat(nonTeaching.polStudyAbsence) || 0) * 0.5) 
-      + ((parseFloat(nonTeaching.meetingAttendGeneral) || 0) * 1.0)
-      + ((parseFloat(nonTeaching.meetingAttendRole) || 0) * 0.5)
-      - ((parseFloat(nonTeaching.meetingAbsence) || 0) * 1.0);
-    
-    // 2. 业务工作
-    const section2 = 
-      ((parseFloat(nonTeaching.newStandards) || 0) * 2) + 
-      ((parseFloat(nonTeaching.peerReviews) || 0) * 0.5) + 
-      ((parseFloat(nonTeaching.teachingSeminars) || 0) * 1.0) + 
-      ((parseFloat(nonTeaching.internshipStudents) || 0) * 0.1) +
-      (parseFloat(nonTeaching.gradDefense) || 0) +
-      (parseFloat(nonTeaching.continuingEd) || 0) +
-      (parseFloat(nonTeaching.onlinePatrol) || 0) +
-      (parseFloat(nonTeaching.skillCompOrg) || 0) +
-      (parseFloat(nonTeaching.skillTestOrg) || 0) +
-      (parseFloat(nonTeaching.baseConstruction) || 0) +
-      (parseFloat(nonTeaching.researchProcess) || 0);
-
-    // 3. 党务及学生管理
-    const section3 = 
-      (parseFloat(nonTeaching.classTeacher) || 0) +
-      (parseFloat(nonTeaching.studentLectures) || 0) +
-      (parseFloat(nonTeaching.clubGuide) || 0) +
-      (parseFloat(nonTeaching.largeEvents) || 0) +
-      (parseFloat(nonTeaching.dormManagement) || 0) +
-      (parseFloat(nonTeaching.employmentWork) || 0) +
-      (parseFloat(nonTeaching.partyWork) || 0) +
-      (parseFloat(nonTeaching.unionActivity) || 0);
-
-    // 4-8 其他
-    const section4 = parseFloat(nonTeaching.schoolEntCoop) || 0;
-    const section5 = parseFloat(nonTeaching.externalTraining) || 0;
-    const section6 = parseFloat(nonTeaching.deptAffairs) || 0;
-    const section7 = parseFloat(nonTeaching.otherWork) || 0;
-    const section8 = parseFloat(nonTeaching.deductions) || 0;
-
-    const total = Math.max(0, section1 + section2 + section3 + section4 + section5 + section6 + section7 - section8);
-
-    return { section1, section2, section3, section4, section5, section6, section7, section8, total };
-  };
-
-  // 汇总
-  const teachingTotal = courses.reduce((sum, c) => sum + calculateRow(c).total, 0);
-  const trainingTotal = trainingCourses.reduce((sum, c) => sum + calculateTrainingRow(c), 0);
-  const gradTotal = calculateGradTotal();
-  const nonTeachingCategories = calculateCategories();
-  const grandTotal = teachingTotal + trainingTotal + gradTotal + nonTeachingCategories.total;
-
-  // --- 操作 ---
-  const handleSave = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
-
-  // 生成CSV
-  const exportToCSV = (type) => {
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-    
-    if (type === 'teaching') {
-      csvContent += "工号,姓名,职称,课程名称,课程性质,班级,学生人数,理论课时,实验/实训课时,批次,K1,K2,K3,K4,理论工作量,实验/实训工作量,总工作量,备注\n";
-      
-      const commonPrefix = `${userInfo.employeeId},${userInfo.name},${userInfo.title}`;
-
-      // 理论与实验课
-      courses.forEach(c => {
-        const calc = calculateRow(c);
-        const natureStr = c.courseNature === 'general' ? '一般课' : '理实一体课';
-        const k4Str = c.newCourseType === 'none' ? '1' : (c.newCourseType === 'personal' ? '1.1' : '1.2');
-        
-        csvContent += `${commonPrefix},${c.name},${natureStr},${c.className},${c.students},${c.theoryHours},${c.labHoursPerBatch},${c.labBatches},${calc.k1},${calc.k2},${calc.k3},${k4Str},${calc.theoryWorkload.toFixed(2)},${calc.labWorkload.toFixed(2)},${calc.total.toFixed(2)},${c.remarks}\n`;
-      });
-
-      // 实训课
-      trainingCourses.forEach(c => {
-        const total = calculateTrainingRow(c);
-        const remark = c.hasGrades ? '登记成绩' : '不登记';
-        csvContent += `${commonPrefix},${c.name},实训课(${remark}),${c.className},-,0,${c.hours},1,-,-,-,-,0,${total.toFixed(2)},${total.toFixed(2)},${c.remarks}\n`;
-      });
-
-      // 毕业设计 (备注包含详细信息)
-      const gradRemark = `答辩:${gradDesign.defendedCount || 0}人; 未答辩:${gradDesign.noDefenseCount || 0}人; 校优:${gradDesign.schoolExcellent || 0}; 推省:${gradDesign.provRecommended || 0}; 省优:${gradDesign.provExcellent || 0}`;
-      csvContent += `${commonPrefix},毕业设计,-,-,${gradDesign.defendedCount || 0},0,0,-,-,-,-,-,0,0,${gradTotal.toFixed(2)},${gradRemark}\n`;
-      
-      // 总计行
-      csvContent += `,,,,,年度总计,,,,,,,,,${(teachingTotal+trainingTotal+gradTotal).toFixed(2)},\n`;
-
-    } else {
-      csvContent += "工号,姓名,职称,项目大类,具体项目,输入数值,得分,备注\n";
-      const commonPrefix = `${userInfo.employeeId},${userInfo.name},${userInfo.title}`;
-
-      // 辅助函数：即使值为0也导出
-      const addLine = (cat, item, val, score, note='') => {
-        const displayVal = val === '' ? '0' : val;
-        const displayScore = typeof score === 'number' ? score.toFixed(2) : score;
-        csvContent += `${commonPrefix},${cat},${item},${displayVal},${displayScore},${note}\n`;
-      };
-
-      // 一、政治业务
-      const s1 = nonTeachingCategories.section1;
-      csvContent += `${commonPrefix},一、政治业务学习,分类总分,-,${s1.toFixed(2)},基准20分\n`;
-      addLine('一、政治业务学习', '政治学习缺席(次)', nonTeaching.polStudyAbsence, -((parseFloat(nonTeaching.polStudyAbsence)||0)*0.5), '扣分');
-      addLine('一、政治业务学习', '会议缺席(次)', nonTeaching.meetingAbsence, -((parseFloat(nonTeaching.meetingAbsence)||0)*1), '扣分');
-      addLine('一、政治业务学习', '会议-一般(次)', nonTeaching.meetingAttendGeneral, (parseFloat(nonTeaching.meetingAttendGeneral)||0)*1, '加分');
-      addLine('一、政治业务学习', '会议-角色(次)', nonTeaching.meetingAttendRole, (parseFloat(nonTeaching.meetingAttendRole)||0)*0.5, '加分');
-
-      // 二、业务工作
-      addLine('二、业务工作', '新课标(个)', nonTeaching.newStandards, (parseFloat(nonTeaching.newStandards)||0)*2);
-      addLine('二、业务工作', '听课评教(次)', nonTeaching.peerReviews, (parseFloat(nonTeaching.peerReviews)||0)*0.5);
-      addLine('二、业务工作', '教学研讨(次)', nonTeaching.teachingSeminars, (parseFloat(nonTeaching.teachingSeminars)||0)*1);
-      addLine('二、业务工作', '指导顶岗实习(人数)', nonTeaching.internshipStudents, ((parseFloat(nonTeaching.internshipStudents)||0)*0.1).toFixed(2));
-      
-      // 其他直接填分数的项
-      const directItems = [
-        ['二、业务工作', '毕业答辩(分)', 'gradDefense'],
-        ['二、业务工作', '继续教育(分)', 'continuingEd'],
-        ['二、业务工作', '线上巡课(分)', 'onlinePatrol'],
-        ['二、业务工作', '组织竞赛(分)', 'skillCompOrg'],
-        ['二、业务工作', '组织考工(分)', 'skillTestOrg'],
-        ['二、业务工作', '基地建设(分)', 'baseConstruction'],
-        ['二、业务工作', '教科研过程(分)', 'researchProcess'],
-        ['三、党务及学生', '班主任管理', 'classTeacher'],
-        ['三、党务及学生', '组织讲座', 'studentLectures'],
-        ['三、党务及学生', '指导社团', 'clubGuide'],
-        ['三、党务及学生', '大型活动', 'largeEvents'],
-        ['三、党务及学生', '宿舍管理', 'dormManagement'],
-        ['三、党务及学生', '就创业工作', 'employmentWork'],
-        ['三、党务及学生', '党务工作', 'partyWork'],
-        ['三、党务及学生', '工会活动', 'unionActivity'],
-        ['四、校企合作', '校企合作', 'schoolEntCoop'],
-        ['五、校外培训', '培训创收', 'externalTraining'],
-        ['六、部门事务', '部门事务', 'deptAffairs'],
-        ['七、其它工作', '其它工作', 'otherWork'],
-        ['八、抵扣', '工作量抵扣', 'deductions']
-      ];
-
-      directItems.forEach(([cat, name, key]) => {
-         const val = nonTeaching[key];
-         const score = parseFloat(val) || 0;
-         csvContent += `${commonPrefix},${cat},${name},-,${score},${key==='deductions'?'扣分项':''}\n`;
-      });
-
-      csvContent += `,,,非教学总计,,${nonTeachingCategories.total.toFixed(2)},\n`;
-    }
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${userInfo.name || '教师'}_${type === 'teaching' ? '教学' : '非教学'}工作量表.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleNumericInput = (setter, field, val) => {
-    setter(prev => ({ ...prev, [field]: val === '' ? '' : val }));
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-32">
-      
-      {/* 顶部导航 */}
-      <div className="bg-white shadow-sm sticky top-0 z-30 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-200">
-                <Calculator className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-slate-800 tracking-tight">教师工作量核算系统</span>
-            </div>
-            <div className="flex bg-slate-100 p-1 rounded-xl">
-              {[
-                { id: 'teaching', label: '教学工作量', icon: FileText },
-                { id: 'non_teaching', label: '非教学工作量', icon: Briefcase },
-                { id: 'summary', label: '数据汇总', icon: Layout }
-              ].map(tab => (
-                <button 
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        
-        {/* ================= 1. 教学工作量 ================= */}
-        {activeTab === 'teaching' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        // --- 主程序 ---
+        const WorkloadCalculator = () => {
+            const [activeTab, setActiveTab] = useState('teaching');
+            const [showToast, setShowToast] = useState(false);
             
-            {/* 毕业设计 */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-              <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><GraduationCap className="h-5 w-5" /></div>
-                    <h2 className="text-lg font-bold text-slate-800">毕业设计</h2>
-                 </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-6 items-end">
-                  {[
-                    { l: '合格答辩', k: 'defendedCount', c: 'bg-slate-50 text-slate-700' },
-                    { l: '合格未答辩', k: 'noDefenseCount', c: 'bg-slate-50 text-slate-500' },
-                    { l: '校优数', k: 'schoolExcellent', c: 'bg-blue-50 text-blue-700' },
-                    { l: '推荐省优', k: 'provRecommended', c: 'bg-indigo-50 text-indigo-700' },
-                    { l: '省优数', k: 'provExcellent', c: 'bg-purple-50 text-purple-700' },
-                  ].map(field => (
-                    <div key={field.k} className="relative group">
-                       <label className="text-[10px] font-bold text-slate-400 uppercase absolute top-2 left-3">{field.l}</label>
-                       <input 
-                        type="number" min="0" 
-                        value={gradDesign[field.k]} 
-                        onChange={e => handleNumericInput(setGradDesign, field.k, e.target.value)}
-                        className={`w-full pt-6 pb-2 px-3 rounded-xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-purple-500 text-xl font-bold transition-all ${field.c}`}
-                        placeholder="0"
-                       />
-                    </div>
-                  ))}
-                  
-                  {/* 工作量数目展示区 */}
-                  <div className="bg-gradient-to-br from-purple-100 to-white border border-purple-200 rounded-xl p-3 flex flex-col items-center justify-center h-[72px]">
-                    <span className="text-[10px] text-purple-400 font-bold uppercase">工作量数目</span>
-                    <span className="text-3xl font-black text-purple-700 leading-none">{gradTotal.toFixed(1)}</span>
-                  </div>
+            // 用户信息
+            const [userInfo, setUserInfo] = useState({
+                name: '',
+                title: '',
+                employeeId: '' // 工号
+            });
+
+            // --- 状态管理 ---
+
+            // 1. 理论与实验课程数据
+            const [courses, setCourses] = useState([
+                {
+                id: 1,
+                semester: '下半年',
+                name: '交通工程学',
+                className: '23交通1班',
+                courseNature: 'general', // general: 一般课, integrated: 理实一体课
+                students: 45,
+                theoryHours: 48,
+                labHoursPerBatch: 8, 
+                labBatches: 2,       
+                examType: 'exam',    
+                isRepeat: false,     
+                isDrawing: false,    
+                newCourseType: 'none', // none: 非新课(1.0), personal: 个人新开(1.1), college: 学院新开(1.2)
+                remarks: ''
+                }
+            ]);
+
+            // 2. 实训课程数据
+            const [trainingCourses, setTrainingCourses] = useState([
+                {
+                id: 101,
+                semester: '下半年',
+                name: '认识实习',
+                className: '23交通全级',
+                hours: 16, 
+                hasGrades: false, 
+                remarks: ''
+                }
+            ]);
+
+            // 3. 毕业设计数据
+            const [gradDesign, setGradDesign] = useState({
+                defendedCount: '0',     
+                noDefenseCount: '0',    
+                schoolExcellent: '0',   
+                provRecommended: '0',   
+                provExcellent: '0',     
+                baseHours: 8,         
+                coeffNoDefense: 0.5,
+                coeffSchool: 1.2,
+                coeffProvRec: 2.0,
+                coeffProvExc: 3.0
+            });
+
+            // 4. 非教学工作量数据
+            const [nonTeaching, setNonTeaching] = useState({
+                // 一、政治和业务学习 (基准20)
+                polStudyAbsence: '',      // 政治学习缺席(因私) -0.5
+                meetingAttendGeneral: '', // 参加会议(一般) +1
+                meetingAttendRole: '',    // 参加会议(指定角色) +0.5
+                meetingAbsence: '',       // 会议缺席(不请假) -1
+                
+                // 二、业务工作
+                newStandards: '',    // 新编课程标准(个) 2分
+                peerReviews: '',     // 听课评教(次) 0.5分
+                teachingSeminars: '',// 教学研讨(次) 1分
+                internshipStudents: '', // 指导顶岗实习(人数) -> 计算: 人数*0.1
+                
+                gradDefense: '',     // 毕业答辩 (分数)
+                continuingEd: '',    // 继续教育 (总分)
+                onlinePatrol: '',    // 线上巡课 (总分)
+                skillCompOrg: '',    // 组织竞赛活动 (总分)
+                skillTestOrg: '',    // 组织考工 (总分)
+                baseConstruction: '',// 实训基地建设 (总分)
+                researchProcess: '', // 教科研过程分 (总分)
+
+                // 三、党务及学生管理
+                classTeacher: '',    // 班主任日常管理
+                studentLectures: '', // 组织学生讲座
+                clubGuide: '',       // 指导社团
+                largeEvents: '',     // 大型学生活动
+                dormManagement: '',  // 宿舍管理
+                employmentWork: '',  // 就创业工作
+                partyWork: '',       // 党务工作
+                unionActivity: '',   // 工会活动
+
+                // 四~八
+                schoolEntCoop: '',   // 校企合作工作
+                externalTraining: '', // 校外培训创收
+                deptAffairs: '',      // 部门事务
+                otherWork: '',       // 基地上课等
+                deductions: ''       // 抵扣
+            });
+
+            // --- 计算逻辑 ---
+
+            const calculateK1 = (n) => {
+                const num = parseInt(n) || 0;
+                if (num >= 50) {
+                let val = 1 + (num - 50) / 100;
+                return Math.min(1.7, val);
+                } else {
+                let val = 1 + (num - 50) / 300;
+                return Math.max(0.9, val);
+                }
+            };
+
+            const calculateExamHours = (type) => {
+                switch (type) {
+                case 'exam': return 5;
+                case 'test_in': return 3;
+                case 'test_out': return 5;
+                default: return 0;
+                }
+            };
+
+            const calculateRow = (course) => {
+                // MODIFIED: 课程性质是“理实一体课”后，系数 K1 就直接为1
+                let k1;
+                if (course.courseNature === 'integrated') {
+                    k1 = 1.0;
+                } else {
+                    k1 = calculateK1(course.students);
+                }
+
+                const k2 = course.isRepeat ? 0.8 : 1.0;
+                const k3 = course.isDrawing ? 1.1 : 1.0;
+                
+                let k4 = 1.0;
+                if (course.newCourseType === 'college') k4 = 1.2;
+                if (course.newCourseType === 'personal') k4 = 1.1;
+                if (course.isRepeat) k4 = 1.0;
+
+                const examHours = calculateExamHours(course.examType);
+                const theoryBase = (parseFloat(course.theoryHours) || 0) + examHours;
+                const theoryWorkload = theoryBase * k1 * k2 * k3 * k4;
+                
+                const labPerBatch = parseFloat(course.labHoursPerBatch) || 0;
+                const batches = parseFloat(course.labBatches) || 0;
+                let labWorkload = 0;
+                if (batches > 0) {
+                const batchCoeff = 1 + (batches - 1) * 0.7;
+                labWorkload = labPerBatch * batchCoeff;
+                }
+
+                return {
+                k1: k1.toFixed(3),
+                k2, k3, k4,
+                examHours,
+                theoryWorkload,
+                labWorkload,
+                total: theoryWorkload + labWorkload
+                };
+            };
+
+            const calculateTrainingRow = (course) => {
+                const hours = parseFloat(course.hours) || 0;
+                let base = hours / 2;
+                if (course.hasGrades) {
+                base += 3;
+                }
+                return base;
+            };
+
+            const calculateGradTotal = () => {
+                const base = ((parseFloat(gradDesign.defendedCount) || 0) * 1.0 + (parseFloat(gradDesign.noDefenseCount) || 0) * gradDesign.coeffNoDefense) * gradDesign.baseHours;
+                const bonus = (
+                ((parseFloat(gradDesign.schoolExcellent) || 0) * (gradDesign.coeffSchool - 1)) + 
+                ((parseFloat(gradDesign.provRecommended) || 0) * (gradDesign.coeffProvRec - 1)) + 
+                ((parseFloat(gradDesign.provExcellent) || 0) * (gradDesign.coeffProvExc - 1))
+                ) * gradDesign.baseHours;
+                return base + bonus;
+            };
+
+            // 分类计算函数 (用于汇总展示)
+            const calculateCategories = () => {
+                // 1. 政治业务学习 (基准20)
+                const section1 = 20 
+                - ((parseFloat(nonTeaching.polStudyAbsence) || 0) * 0.5) 
+                + ((parseFloat(nonTeaching.meetingAttendGeneral) || 0) * 1.0)
+                + ((parseFloat(nonTeaching.meetingAttendRole) || 0) * 0.5)
+                - ((parseFloat(nonTeaching.meetingAbsence) || 0) * 1.0);
+                
+                // 2. 业务工作
+                const section2 = 
+                ((parseFloat(nonTeaching.newStandards) || 0) * 2) + 
+                ((parseFloat(nonTeaching.peerReviews) || 0) * 0.5) + 
+                ((parseFloat(nonTeaching.teachingSeminars) || 0) * 1.0) + 
+                ((parseFloat(nonTeaching.internshipStudents) || 0) * 0.1) +
+                (parseFloat(nonTeaching.gradDefense) || 0) +
+                (parseFloat(nonTeaching.continuingEd) || 0) +
+                (parseFloat(nonTeaching.onlinePatrol) || 0) +
+                (parseFloat(nonTeaching.skillCompOrg) || 0) +
+                (parseFloat(nonTeaching.skillTestOrg) || 0) +
+                (parseFloat(nonTeaching.baseConstruction) || 0) +
+                (parseFloat(nonTeaching.researchProcess) || 0);
+
+                // 3. 党务及学生管理
+                const section3 = 
+                (parseFloat(nonTeaching.classTeacher) || 0) +
+                (parseFloat(nonTeaching.studentLectures) || 0) +
+                (parseFloat(nonTeaching.clubGuide) || 0) +
+                (parseFloat(nonTeaching.largeEvents) || 0) +
+                (parseFloat(nonTeaching.dormManagement) || 0) +
+                (parseFloat(nonTeaching.employmentWork) || 0) +
+                (parseFloat(nonTeaching.partyWork) || 0) +
+                (parseFloat(nonTeaching.unionActivity) || 0);
+
+                // 4-8 其他
+                const section4 = parseFloat(nonTeaching.schoolEntCoop) || 0;
+                const section5 = parseFloat(nonTeaching.externalTraining) || 0;
+                const section6 = parseFloat(nonTeaching.deptAffairs) || 0;
+                const section7 = parseFloat(nonTeaching.otherWork) || 0;
+                const section8 = parseFloat(nonTeaching.deductions) || 0;
+
+                const total = Math.max(0, section1 + section2 + section3 + section4 + section5 + section6 + section7 - section8);
+
+                return { section1, section2, section3, section4, section5, section6, section7, section8, total };
+            };
+
+            // 汇总
+            const teachingTotal = courses.reduce((sum, c) => sum + calculateRow(c).total, 0);
+            const trainingTotal = trainingCourses.reduce((sum, c) => sum + calculateTrainingRow(c), 0);
+            const gradTotal = calculateGradTotal();
+            const nonTeachingCategories = calculateCategories();
+            const grandTotal = teachingTotal + trainingTotal + gradTotal + nonTeachingCategories.total;
+
+            // --- 操作 ---
+            const handleSave = () => {
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 3000);
+            };
+
+            // 生成CSV
+            const exportToCSV = (type) => {
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+                
+                if (type === 'teaching') {
+                csvContent += "工号,姓名,职称,课程名称,课程性质,班级,学生人数,理论课时,实验/实训课时,批次,K1,K2,K3,K4,理论工作量,实验/实训工作量,总工作量,备注\n";
+                
+                const commonPrefix = `${userInfo.employeeId},${userInfo.name},${userInfo.title}`;
+
+                // 理论与实验课
+                courses.forEach(c => {
+                    const calc = calculateRow(c);
+                    const natureStr = c.courseNature === 'general' ? '一般课' : '理实一体课';
+                    const k4Str = c.newCourseType === 'none' ? '1' : (c.newCourseType === 'personal' ? '1.1' : '1.2');
+                    
+                    csvContent += `${commonPrefix},${c.name},${natureStr},${c.className},${c.students},${c.theoryHours},${c.labHoursPerBatch},${c.labBatches},${calc.k1},${calc.k2},${calc.k3},${k4Str},${calc.theoryWorkload.toFixed(2)},${calc.labWorkload.toFixed(2)},${calc.total.toFixed(2)},${c.remarks}\n`;
+                });
+
+                // 实训课
+                trainingCourses.forEach(c => {
+                    const total = calculateTrainingRow(c);
+                    const remark = c.hasGrades ? '登记成绩' : '不登记';
+                    csvContent += `${commonPrefix},${c.name},实训课(${remark}),${c.className},-,0,${c.hours},1,-,-,-,-,0,${total.toFixed(2)},${total.toFixed(2)},${c.remarks}\n`;
+                });
+
+                // 毕业设计 (备注包含详细信息)
+                const gradRemark = `答辩:${gradDesign.defendedCount || 0}人; 未答辩:${gradDesign.noDefenseCount || 0}人; 校优:${gradDesign.schoolExcellent || 0}; 推省:${gradDesign.provRecommended || 0}; 省优:${gradDesign.provExcellent || 0}`;
+                csvContent += `${commonPrefix},毕业设计,-,-,${gradDesign.defendedCount || 0},0,0,-,-,-,-,-,0,0,${gradTotal.toFixed(2)},${gradRemark}\n`;
+                
+                // 总计行
+                csvContent += `,,,,,年度总计,,,,,,,,,${(teachingTotal+trainingTotal+gradTotal).toFixed(2)},\n`;
+
+                } else {
+                csvContent += "工号,姓名,职称,项目大类,具体项目,输入数值,得分,备注\n";
+                const commonPrefix = `${userInfo.employeeId},${userInfo.name},${userInfo.title}`;
+
+                // 辅助函数：即使值为0也导出
+                const addLine = (cat, item, val, score, note='') => {
+                    const displayVal = val === '' ? '0' : val;
+                    const displayScore = typeof score === 'number' ? score.toFixed(2) : score;
+                    csvContent += `${commonPrefix},${cat},${item},${displayVal},${displayScore},${note}\n`;
+                };
+
+                // 一、政治业务
+                const s1 = nonTeachingCategories.section1;
+                csvContent += `${commonPrefix},一、政治业务学习,分类总分,-,${s1.toFixed(2)},基准20分\n`;
+                addLine('一、政治业务学习', '政治学习缺席(次)', nonTeaching.polStudyAbsence, -((parseFloat(nonTeaching.polStudyAbsence)||0)*0.5), '扣分');
+                addLine('一、政治业务学习', '会议缺席(次)', nonTeaching.meetingAbsence, -((parseFloat(nonTeaching.meetingAbsence)||0)*1), '扣分');
+                addLine('一、政治业务学习', '会议-一般(次)', nonTeaching.meetingAttendGeneral, (parseFloat(nonTeaching.meetingAttendGeneral)||0)*1, '加分');
+                addLine('一、政治业务学习', '会议-角色(次)', nonTeaching.meetingAttendRole, (parseFloat(nonTeaching.meetingAttendRole)||0)*0.5, '加分');
+
+                // 二、业务工作
+                addLine('二、业务工作', '新课标(个)', nonTeaching.newStandards, (parseFloat(nonTeaching.newStandards)||0)*2);
+                addLine('二、业务工作', '听课评教(次)', nonTeaching.peerReviews, (parseFloat(nonTeaching.peerReviews)||0)*0.5);
+                addLine('二、业务工作', '教学研讨(次)', nonTeaching.teachingSeminars, (parseFloat(nonTeaching.teachingSeminars)||0)*1);
+                addLine('二、业务工作', '指导顶岗实习(人数)', nonTeaching.internshipStudents, ((parseFloat(nonTeaching.internshipStudents)||0)*0.1).toFixed(2));
+                
+                // 其他直接填分数的项
+                const directItems = [
+                    ['二、业务工作', '毕业答辩(分)', 'gradDefense'],
+                    ['二、业务工作', '继续教育(分)', 'continuingEd'],
+                    ['二、业务工作', '线上巡课(分)', 'onlinePatrol'],
+                    ['二、业务工作', '组织竞赛(分)', 'skillCompOrg'],
+                    ['二、业务工作', '组织考工(分)', 'skillTestOrg'],
+                    ['二、业务工作', '基地建设(分)', 'baseConstruction'],
+                    ['二、业务工作', '教科研过程(分)', 'researchProcess'],
+                    ['三、党务及学生', '班主任管理', 'classTeacher'],
+                    ['三、党务及学生', '组织讲座', 'studentLectures'],
+                    ['三、党务及学生', '指导社团', 'clubGuide'],
+                    ['三、党务及学生', '大型活动', 'largeEvents'],
+                    ['三、党务及学生', '宿舍管理', 'dormManagement'],
+                    ['三、党务及学生', '就创业工作', 'employmentWork'],
+                    ['三、党务及学生', '党务工作', 'partyWork'],
+                    ['三、党务及学生', '工会活动', 'unionActivity'],
+                    ['四、校企合作', '校企合作', 'schoolEntCoop'],
+                    ['五、校外培训', '培训创收', 'externalTraining'],
+                    ['六、部门事务', '部门事务', 'deptAffairs'],
+                    ['七、其它工作', '其它工作', 'otherWork'],
+                    ['八、抵扣', '工作量抵扣', 'deductions']
+                ];
+
+                directItems.forEach(([cat, name, key]) => {
+                    const val = nonTeaching[key];
+                    const score = parseFloat(val) || 0;
+                    csvContent += `${commonPrefix},${cat},${name},-,${score},${key==='deductions'?'扣分项':''}\n`;
+                });
+
+                csvContent += `,,,非教学总计,,${nonTeachingCategories.total.toFixed(2)},\n`;
+                }
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `${userInfo.name || '教师'}_${type === 'teaching' ? '教学' : '非教学'}工作量表.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const handleNumericInput = (setter, field, val) => {
+                setter(prev => ({ ...prev, [field]: val === '' ? '' : val }));
+            };
+
+            const StatCard = ({ label, value, colorClass }) => (
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</span>
+                <span className={`text-2xl font-black ${colorClass}`}>{typeof value === 'number' ? value.toFixed(2) : value}</span>
                 </div>
-              </div>
-            </section>
+            );
 
-            {/* 理论与实验课程 */}
-            <section className="space-y-4">
-               <div className="flex justify-between items-center px-1">
-                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><FileText className="h-5 w-5" /></div>
-                    <h2 className="text-lg font-bold text-slate-800">理论与实验课程</h2>
-                 </div>
-                 <button onClick={() => setCourses([...courses, { id: Date.now(), semester: '下半年', name: '', className: '', courseNature: 'general', students: 40, theoryHours: 32, labHoursPerBatch: 0, labBatches: 1, examType: 'test_in', isRepeat: false, isDrawing: false, newCourseType: 'none', remarks: '' }])} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-md hover:bg-blue-700 hover:shadow-lg transition-all text-sm font-semibold active:scale-95">
-                  <Plus className="h-4 w-4" /> 新增
-                </button>
-               </div>
-
-               {courses.map((course, index) => {
-                 const calc = calculateRow(course);
-                 return (
-                   <div key={course.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300 hover:border-blue-200 group">
-                     {/* 卡片头部 */}
-                     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-50">
-                        <div className="flex items-center gap-4">
-                           <span className="text-xs font-bold text-slate-300 px-2">#{index + 1}</span>
-                           <div className="flex gap-2">
-                             <input type="text" value={course.name} onChange={e => {const newC = [...courses]; newC[index].name = e.target.value; setCourses(newC)}} className="text-base font-bold text-slate-800 border-none bg-transparent p-0 focus:ring-0 placeholder-slate-300 w-48" placeholder="课程名称..." />
-                             <input type="text" value={course.className} onChange={e => {const newC = [...courses]; newC[index].className = e.target.value; setCourses(newC)}} className="text-sm font-medium text-slate-500 border-none bg-slate-50 rounded px-2 py-0.5 focus:ring-0 placeholder-slate-300 w-32" placeholder="班级..." />
-                           </div>
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-32">
+                
+                {/* 顶部导航 */}
+                <div className="bg-white shadow-sm sticky top-0 z-30 border-b border-slate-200">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16">
+                        <div className="flex items-center gap-3">
+                        <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-200">
+                            <Calculator className="h-5 w-5 text-white" />
                         </div>
-                        <button onClick={() => {const newC = courses.filter(c => c.id !== course.id); setCourses(newC)}} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
-                     </div>
+                        <span className="font-bold text-lg text-slate-800 tracking-tight">教师工作量核算系统</span>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                        {[
+                            { id: 'teaching', label: '教学工作量', icon: FileText },
+                            { id: 'non_teaching', label: '非教学工作量', icon: Briefcase },
+                            { id: 'summary', label: '数据汇总', icon: Layout }
+                        ].map(tab => (
+                            <button 
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                            >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                            </button>
+                        ))}
+                        </div>
+                    </div>
+                    </div>
+                </div>
 
-                     <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* 左侧详细设置 */}
-                        <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6">
-                           
-                           {/* 基础信息 */}
-                           <div className="space-y-3">
-                              <label className="text-xs font-bold text-slate-400 uppercase">基础设置</label>
-                              <div className="space-y-2">
-                                <select value={course.semester} onChange={e => {const newC = [...courses]; newC[index].semester = e.target.value; setCourses(newC)}} className="w-full text-sm border-slate-200 rounded-lg bg-slate-50/50">
-                                  <option>上半年</option><option>下半年</option>
-                                </select>
-                                <select value={course.courseNature} onChange={e => {const newC = [...courses]; newC[index].courseNature = e.target.value; setCourses(newC)}} className="w-full text-sm border-slate-200 rounded-lg bg-slate-50/50">
-                                  <option value="general">一般课</option><option value="integrated">理实一体课</option>
-                                </select>
-                                <div className="relative flex items-center gap-2 border border-slate-200 rounded-lg px-3 bg-white hover:border-blue-400 transition-colors">
-                                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">学生数:</span>
-                                  <input 
-                                    type="number" 
-                                    value={course.students} 
-                                    onChange={e => {const newC = [...courses]; newC[index].students = e.target.value; setCourses(newC)}} 
-                                    className="w-full text-sm border-none focus:ring-0 p-2 text-center font-bold text-blue-600" 
-                                    placeholder="0" 
-                                  />
-                                  <span className="text-[10px] text-slate-300 whitespace-nowrap bg-slate-100 px-1.5 rounded">K1:{calc.k1}</span>
+                <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+                    
+                    {/* ================= 1. 教学工作量 ================= */}
+                    {activeTab === 'teaching' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        
+                        {/* 顶部统计条 */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <StatCard label="教学课程" value={teachingTotal} colorClass="text-blue-600" />
+                        <StatCard label="实训课程" value={trainingTotal} colorClass="text-orange-500" />
+                        <StatCard label="毕业设计" value={gradTotal} colorClass="text-purple-600" />
+                        <div className="bg-slate-900 p-4 rounded-xl shadow-lg shadow-slate-300 flex flex-col text-white">
+                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">教学总计</span>
+                            <span className="text-2xl font-black">{(teachingTotal + trainingTotal + gradTotal).toFixed(2)}</span>
+                        </div>
+                        </div>
+
+                        {/* 毕业设计 */}
+                        <section className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+                        <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><GraduationCap className="h-5 w-5" /></div>
+                                <h2 className="text-lg font-bold text-slate-800">毕业设计</h2>
+                            </div>
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-6 items-end">
+                            {[
+                                { l: '合格答辩', k: 'defendedCount', c: 'bg-slate-50 text-slate-700' },
+                                { l: '合格未答辩', k: 'noDefenseCount', c: 'bg-slate-50 text-slate-500' },
+                                { l: '校优数', k: 'schoolExcellent', c: 'bg-blue-50 text-blue-700' },
+                                { l: '推荐省优', k: 'provRecommended', c: 'bg-indigo-50 text-indigo-700' },
+                                { l: '省优数', k: 'provExcellent', c: 'bg-purple-50 text-purple-700' },
+                            ].map(field => (
+                                <div key={field.k} className="relative group">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase absolute top-2 left-3">{field.l}</label>
+                                <input 
+                                    type="number" min="0" 
+                                    value={gradDesign[field.k]} 
+                                    onChange={e => handleNumericInput(setGradDesign, field.k, e.target.value)}
+                                    className={`w-full pt-6 pb-2 px-3 rounded-xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-purple-500 text-xl font-bold transition-all ${field.c}`}
+                                    placeholder="0"
+                                />
                                 </div>
-                              </div>
-                           </div>
+                            ))}
+                            
+                            {/* 工作量数目展示区 */}
+                            <div className="bg-gradient-to-br from-purple-100 to-white border border-purple-200 rounded-xl p-3 flex flex-col items-center justify-center h-[72px]">
+                                <span className="text-[10px] text-purple-400 font-bold uppercase">工作量数目</span>
+                                <span className="text-3xl font-black text-purple-700 leading-none">{gradTotal.toFixed(1)}</span>
+                            </div>
+                            </div>
+                        </div>
+                        </section>
 
-                           {/* 理论设置 */}
-                           <div className="space-y-3">
-                              <label className="text-xs font-bold text-slate-400 uppercase">理论部分</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                <input type="number" value={course.theoryHours} onChange={e => {const newC = [...courses]; newC[index].theoryHours = e.target.value; setCourses(newC)}} className="text-sm border-slate-200 rounded-lg" placeholder="课时" />
-                                <select value={course.examType} onChange={e => {const newC = [...courses]; newC[index].examType = e.target.value; setCourses(newC)}} className="text-xs border-slate-200 rounded-lg">
-                                  <option value="test_in">考查课内</option><option value="test_out">考查课外</option><option value="exam">考试</option>
-                                </select>
-                              </div>
-                              <select value={course.newCourseType} onChange={e => {const newC = [...courses]; newC[index].newCourseType = e.target.value; setCourses(newC)}} className="w-full text-xs border-slate-200 rounded-lg text-slate-600">
-                                <option value="none">非新开课</option><option value="personal">个人新开(1.1)</option><option value="college">学院新开(1.2)</option>
-                              </select>
-                              <div className="flex gap-2">
-                                <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={course.isRepeat} onChange={e => {const newC = [...courses]; newC[index].isRepeat = e.target.checked; setCourses(newC)}} className="rounded text-blue-600 focus:ring-0" />重复课</label>
-                                <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={course.isDrawing} onChange={e => {const newC = [...courses]; newC[index].isDrawing = e.target.checked; setCourses(newC)}} className="rounded text-blue-600 focus:ring-0" />制图</label>
-                              </div>
-                           </div>
+                        {/* 理论与实验课程 */}
+                        <section className="space-y-4">
+                        <div className="flex justify-between items-center px-1">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><FileText className="h-5 w-5" /></div>
+                                <h2 className="text-lg font-bold text-slate-800">理论与实验课程</h2>
+                            </div>
+                            <button onClick={() => setCourses([...courses, { id: Date.now(), semester: '下半年', name: '', className: '', courseNature: 'general', students: 40, theoryHours: 32, labHoursPerBatch: 0, labBatches: 1, examType: 'test_in', isRepeat: false, isDrawing: false, newCourseType: 'none', remarks: '' }])} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-md hover:bg-blue-700 hover:shadow-lg transition-all text-sm font-semibold active:scale-95">
+                            <Plus className="h-4 w-4" /> 新增
+                            </button>
+                        </div>
 
-                           {/* 实验设置 */}
-                           <div className="space-y-3">
-                              <label className="text-xs font-bold text-blue-400 uppercase">实验部分</label>
-                              <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <input type="number" value={course.labHoursPerBatch} onChange={e => {const newC = [...courses]; newC[index].labHoursPerBatch = e.target.value; setCourses(newC)}} className="text-sm border-blue-200 rounded-lg focus:border-blue-400 focus:ring-blue-200" placeholder="单批课时" />
-                                  <input type="number" value={course.labBatches} onChange={e => {const newC = [...courses]; newC[index].labBatches = e.target.value; setCourses(newC)}} className="text-sm border-blue-200 rounded-lg focus:border-blue-400 focus:ring-blue-200 text-center" placeholder="批数" />
+                        {courses.map((course, index) => {
+                            const calc = calculateRow(course);
+                            return (
+                            <div key={course.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300 hover:border-blue-200 group">
+                                {/* 卡片头部 */}
+                                <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-50">
+                                    <div className="flex items-center gap-4">
+                                    <span className="text-xs font-bold text-slate-300 px-2">#{index + 1}</span>
+                                    <div className="flex gap-2">
+                                        <input type="text" value={course.name} onChange={e => {const newC = [...courses]; newC[index].name = e.target.value; setCourses(newC)}} className="text-base font-bold text-slate-800 border-none bg-transparent p-0 focus:ring-0 placeholder-slate-300 w-48" placeholder="课程名称..." />
+                                        <input type="text" value={course.className} onChange={e => {const newC = [...courses]; newC[index].className = e.target.value; setCourses(newC)}} className="text-sm font-medium text-slate-500 border-none bg-slate-50 rounded px-2 py-0.5 focus:ring-0 placeholder-slate-300 w-32" placeholder="班级..." />
+                                    </div>
+                                    </div>
+                                    <button onClick={() => {const newC = courses.filter(c => c.id !== course.id); setCourses(newC)}} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
                                 </div>
-                                <div className="text-[10px] text-blue-400 text-center">公式: 单批×[1+(批数-1)×0.7]</div>
-                              </div>
-                           </div>
+
+                                <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                    {/* 左侧详细设置 */}
+                                    <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    
+                                    {/* 基础信息 */}
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-400 uppercase">基础设置</label>
+                                        <div className="space-y-2">
+                                            <select value={course.semester} onChange={e => {const newC = [...courses]; newC[index].semester = e.target.value; setCourses(newC)}} className="w-full text-sm border-slate-200 rounded-lg bg-slate-50/50">
+                                            <option>上半年</option><option>下半年</option>
+                                            </select>
+                                            <select value={course.courseNature} onChange={e => {const newC = [...courses]; newC[index].courseNature = e.target.value; setCourses(newC)}} className="w-full text-sm border-slate-200 rounded-lg bg-slate-50/50">
+                                            <option value="general">一般课</option><option value="integrated">理实一体课</option>
+                                            </select>
+                                            <div className="relative flex items-center gap-2 border border-slate-200 rounded-lg px-3 bg-white hover:border-blue-400 transition-colors">
+                                            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">学生数:</span>
+                                            <input 
+                                                type="number" 
+                                                value={course.students} 
+                                                onChange={e => {const newC = [...courses]; newC[index].students = e.target.value; setCourses(newC)}} 
+                                                className="w-full text-sm border-none focus:ring-0 p-2 text-center font-bold text-blue-600" 
+                                                placeholder="0" 
+                                            />
+                                            <span className="text-[10px] text-slate-300 whitespace-nowrap bg-slate-100 px-1.5 rounded">K1:{calc.k1}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 理论设置 */}
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-400 uppercase">理论部分</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input type="number" value={course.theoryHours} onChange={e => {const newC = [...courses]; newC[index].theoryHours = e.target.value; setCourses(newC)}} className="text-sm border-slate-200 rounded-lg" placeholder="课时" />
+                                            <select value={course.examType} onChange={e => {const newC = [...courses]; newC[index].examType = e.target.value; setCourses(newC)}} className="text-xs border-slate-200 rounded-lg">
+                                            <option value="test_in">考查课内</option><option value="test_out">考查课外</option><option value="exam">考试</option>
+                                            </select>
+                                        </div>
+                                        <select value={course.newCourseType} onChange={e => {const newC = [...courses]; newC[index].newCourseType = e.target.value; setCourses(newC)}} className="w-full text-xs border-slate-200 rounded-lg text-slate-600">
+                                            <option value="none">非新开课</option><option value="personal">个人新开(1.1)</option><option value="college">学院新开(1.2)</option>
+                                        </select>
+                                        <div className="flex gap-2">
+                                            <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={course.isRepeat} onChange={e => {const newC = [...courses]; newC[index].isRepeat = e.target.checked; setCourses(newC)}} className="rounded text-blue-600 focus:ring-0" />重复课</label>
+                                            <label className="flex items-center gap-1 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={course.isDrawing} onChange={e => {const newC = [...courses]; newC[index].isDrawing = e.target.checked; setCourses(newC)}} className="rounded text-blue-600 focus:ring-0" />制图</label>
+                                        </div>
+                                    </div>
+
+                                    {/* 实验设置 */}
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-blue-400 uppercase">实验部分</label>
+                                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 space-y-2">
+                                            <div className="grid grid-cols-2 gap-2">
+                                            <input type="number" value={course.labHoursPerBatch} onChange={e => {const newC = [...courses]; newC[index].labHoursPerBatch = e.target.value; setCourses(newC)}} className="text-sm border-blue-200 rounded-lg focus:border-blue-400 focus:ring-blue-200" placeholder="单批课时" />
+                                            <input type="number" value={course.labBatches} onChange={e => {const newC = [...courses]; newC[index].labBatches = e.target.value; setCourses(newC)}} className="text-sm border-blue-200 rounded-lg focus:border-blue-400 focus:ring-blue-200 text-center" placeholder="批数" />
+                                            </div>
+                                            <div className="text-[10px] text-blue-400 text-center">公式: 单批×[1+(批数-1)×0.7]</div>
+                                        </div>
+                                    </div>
+                                    </div>
+
+                                    {/* 右侧结果 */}
+                                    <div className="lg:col-span-3 flex flex-col justify-center border-l border-slate-100 pl-6">
+                                    <div className="space-y-2 mb-4">
+                                        <div className="flex justify-between text-xs text-slate-400"><span>理论</span><span className="font-mono text-slate-600">{calc.theoryWorkload.toFixed(2)}</span></div>
+                                        <div className="flex justify-between text-xs text-blue-400 font-bold"><span>实验</span><span className="font-mono text-blue-600">{calc.labWorkload.toFixed(2)}</span></div>
+                                    </div>
+                                    <div className="pt-3 border-t border-slate-100">
+                                        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Total Workload</div>
+                                        <div className="text-3xl font-black text-slate-800 tracking-tighter">{calc.total.toFixed(2)}</div>
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+                            );
+                        })}
+                        </section>
+
+                        {/* 实训课程 */}
+                        <section className="space-y-4 pt-4 border-t border-slate-200">
+                        <div className="flex justify-between items-center px-1">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-orange-50 rounded-lg text-orange-600"><Wrench className="h-5 w-5" /></div>
+                                <h2 className="text-lg font-bold text-slate-800">实训课程</h2>
+                            </div>
+                            <button onClick={() => setTrainingCourses([...trainingCourses, { id: Date.now(), semester: '下半年', name: '', className: '', hours: 16, hasGrades: false, remarks: '' }])} className="flex items-center gap-1.5 bg-orange-500 text-white px-4 py-2 rounded-xl shadow-md hover:bg-orange-600 transition-all text-sm font-semibold active:scale-95">
+                            <Plus className="h-4 w-4" /> 新增
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {trainingCourses.map((course, index) => {
+                            const total = calculateTrainingRow(course);
+                            return (
+                                <div key={course.id} className="bg-white p-5 rounded-2xl border border-orange-100 shadow-sm flex flex-col gap-4 relative">
+                                    <button onClick={() => {const newT = trainingCourses.filter(t => t.id !== course.id); setTrainingCourses(newT)}} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                                    <div className="grid grid-cols-12 gap-3 pr-6">
+                                    <div className="col-span-3">
+                                        <label className="text-[10px] font-bold text-slate-300 uppercase">学期</label>
+                                        <select value={course.semester} onChange={e => {const newT=[...trainingCourses]; newT[index].semester=e.target.value; setTrainingCourses(newT)}} className="w-full text-xs border-slate-200 rounded-lg bg-slate-50"><option>上半年</option><option>下半年</option></select>
+                                    </div>
+                                    <div className="col-span-9">
+                                        <label className="text-[10px] font-bold text-slate-300 uppercase">课程名称</label>
+                                        <input type="text" value={course.name} onChange={e => {const newT=[...trainingCourses]; newT[index].name=e.target.value; setTrainingCourses(newT)}} className="w-full text-sm font-bold border-slate-200 rounded-lg" placeholder="实训名称" />
+                                    </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <label className="text-[10px] font-bold text-orange-400 uppercase">实训总课时</label>
+                                        <div className="relative">
+                                        <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-orange-200" />
+                                        <input type="number" value={course.hours} onChange={e => {const newT=[...trainingCourses]; newT[index].hours=e.target.value; setTrainingCourses(newT)}} className="w-full pl-9 text-sm font-bold border-orange-200 rounded-lg focus:ring-orange-500" />
+                                        </div>
+                                    </div>
+                                    <label className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-all w-24 h-[58px] mt-4 ${course.hasGrades ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                        <input type="checkbox" checked={course.hasGrades} onChange={e => {const newT=[...trainingCourses]; newT[index].hasGrades=e.target.checked; setTrainingCourses(newT)}} className="hidden" />
+                                        <CheckSquare className="h-4 w-4 mb-1" />
+                                        <span className="text-[10px] font-bold">登记成绩</span>
+                                    </label>
+                                    <div className="flex flex-col items-end justify-end flex-1 mt-4">
+                                        <span className="text-[10px] text-slate-400 uppercase font-bold">工作量</span>
+                                        <span className="text-2xl font-black text-orange-600 leading-none">{total.toFixed(1)}</span>
+                                    </div>
+                                    </div>
+                                </div>
+                            );
+                            })}
+                        </div>
+                        </section>
+                    </div>
+                    )}
+
+                    {/* ================= 2. 非教学工作量 (美化与更新) ================= */}
+                    {activeTab === 'non_teaching' && (
+                    <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        
+                        {/* 一、政治和业务学习 (简化均衡布局) */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <span className="p-1.5 bg-green-100 text-green-600 rounded-lg"><BookOpen className="h-5 w-5"/></span>
+                                一、政治和业务学习 <span className="text-xs text-slate-400 font-normal ml-2">基准分 20分</span>
+                            </h3>
+                        </div>
+                        <div className="p-6">
+                            {/* 分为上下两排或网格，使其均衡 */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {/* 因私请假 */}
+                                <div className="p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center gap-2 hover:border-slate-300 transition-colors">
+                                    <span className="text-sm font-bold text-slate-600">政治学习缺席</span>
+                                    <div className="flex items-center gap-1">
+                                    <input 
+                                        type="number" min="0" placeholder="0"
+                                        value={nonTeaching.polStudyAbsence} 
+                                        onChange={e => handleNumericInput(setNonTeaching, 'polStudyAbsence', e.target.value)} 
+                                        className="w-16 text-center border-slate-200 rounded-md p-1 font-bold text-slate-700"
+                                    />
+                                    <span className="text-xs text-slate-400">次</span>
+                                    </div>
+                                    <span className="text-[10px] text-red-500 bg-red-50 px-2 py-0.5 rounded-full">-0.5分/次</span>
+                                </div>
+
+                                {/* 会议缺席 */}
+                                <div className="p-4 rounded-xl border border-red-200 bg-red-50/30 flex flex-col items-center justify-center text-center gap-2">
+                                    <span className="text-sm font-bold text-red-700">会议缺席(无故)</span>
+                                    <div className="flex items-center gap-1">
+                                    <input 
+                                        type="number" min="0" placeholder="0"
+                                        value={nonTeaching.meetingAbsence} 
+                                        onChange={e => handleNumericInput(setNonTeaching, 'meetingAbsence', e.target.value)} 
+                                        className="w-16 text-center border-red-200 rounded-md p-1 font-bold text-red-700 bg-white"
+                                    />
+                                    <span className="text-xs text-red-400">次</span>
+                                    </div>
+                                    <span className="text-[10px] text-red-600 bg-white px-2 py-0.5 rounded-full">-1分/次</span>
+                                </div>
+
+                                {/* 参加会议(一般) */}
+                                <div className="p-4 rounded-xl border border-green-200 bg-green-50/30 flex flex-col items-center justify-center text-center gap-2">
+                                    <span className="text-sm font-bold text-green-700">讲座/会议(一般)</span>
+                                    <div className="flex items-center gap-1">
+                                    <input 
+                                        type="number" min="0" placeholder="0"
+                                        value={nonTeaching.meetingAttendGeneral} 
+                                        onChange={e => handleNumericInput(setNonTeaching, 'meetingAttendGeneral', e.target.value)} 
+                                        className="w-16 text-center border-green-200 rounded-md p-1 font-bold text-green-700 bg-white"
+                                    />
+                                    <span className="text-xs text-green-400">次</span>
+                                    </div>
+                                    <span className="text-[10px] text-green-600 bg-white px-2 py-0.5 rounded-full">+1分/次</span>
+                                </div>
+
+                                {/* 参加会议(角色) */}
+                                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 flex flex-col items-center justify-center text-center gap-2">
+                                    <span className="text-sm font-bold text-emerald-700">讲座/会议(角色)</span>
+                                    <div className="flex items-center gap-1">
+                                    <input 
+                                        type="number" min="0" placeholder="0"
+                                        value={nonTeaching.meetingAttendRole} 
+                                        onChange={e => handleNumericInput(setNonTeaching, 'meetingAttendRole', e.target.value)} 
+                                        className="w-16 text-center border-emerald-200 rounded-md p-1 font-bold text-emerald-700 bg-white"
+                                    />
+                                    <span className="text-xs text-emerald-400">次</span>
+                                    </div>
+                                    <span className="text-[10px] text-emerald-600 bg-white px-2 py-0.5 rounded-full">+0.5分/次</span>
+                                </div>
+                            </div>
+                        </div>
                         </div>
 
-                        {/* 右侧结果 */}
-                        <div className="lg:col-span-3 flex flex-col justify-center border-l border-slate-100 pl-6">
-                           <div className="space-y-2 mb-4">
-                             <div className="flex justify-between text-xs text-slate-400"><span>理论</span><span className="font-mono text-slate-600">{calc.theoryWorkload.toFixed(2)}</span></div>
-                             <div className="flex justify-between text-xs text-blue-400 font-bold"><span>实验</span><span className="font-mono text-blue-600">{calc.labWorkload.toFixed(2)}</span></div>
-                           </div>
-                           <div className="pt-3 border-t border-slate-100">
-                             <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Total Workload</div>
-                             <div className="text-3xl font-black text-slate-800 tracking-tighter">{calc.total.toFixed(2)}</div>
-                           </div>
+                        {/* 二、业务工作 */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg"><Briefcase className="h-5 w-5"/></span>二、业务工作</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[
+                                {l: '新编课程标准(个)', k: 'newStandards', p: '2分/个'},
+                                {l: '听课评教(次)', k: 'peerReviews', p: '0.5分/次'},
+                                {l: '教学研讨(次)', k: 'teachingSeminars', p: '1分/次'}, 
+                                {l: '指导顶岗实习(人数)', k: 'internshipStudents', p: '0.1分/生'},
+                                {l: '毕业答辩(分)', k: 'gradDefense', p: '填总分'}, // 改为分数
+                                {l: '继续教育/培训(分)', k: 'continuingEd', p: '填总分'},
+                                {l: '线上巡课(分)', k: 'onlinePatrol', p: '填总分'},
+                                {l: '组织竞赛活动(分)', k: 'skillCompOrg', p: '填总分'},
+                                {l: '组织考工(分)', k: 'skillTestOrg', p: '填总分'},
+                                {l: '实训基地建设(分)', k: 'baseConstruction', p: '填总分'},
+                                {l: '教科研过程分', k: 'researchProcess', p: '填总分'},
+                            ].map(item => (
+                                <div key={item.k} className="flex justify-between items-center border border-slate-100 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-slate-700">{item.l}</span>
+                                    <span className="text-[10px] text-slate-400">{item.p}</span>
+                                </div>
+                                <input 
+                                    type="number" min="0" placeholder="0"
+                                    value={nonTeaching[item.k]} 
+                                    onChange={e => handleNumericInput(setNonTeaching, item.k, e.target.value)} 
+                                    className="w-20 text-center border-slate-200 rounded-lg text-sm font-bold text-indigo-600 focus:ring-indigo-500" 
+                                />
+                                </div>
+                            ))}
                         </div>
-                     </div>
-                   </div>
-                 );
-               })}
-            </section>
-
-            {/* 实训课程 */}
-            <section className="space-y-4 pt-4 border-t border-slate-200">
-               <div className="flex justify-between items-center px-1">
-                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-50 rounded-lg text-orange-600"><Wrench className="h-5 w-5" /></div>
-                    <h2 className="text-lg font-bold text-slate-800">实训课程</h2>
-                 </div>
-                 <button onClick={() => setTrainingCourses([...trainingCourses, { id: Date.now(), semester: '下半年', name: '', className: '', hours: 16, hasGrades: false, remarks: '' }])} className="flex items-center gap-1.5 bg-orange-500 text-white px-4 py-2 rounded-xl shadow-md hover:bg-orange-600 transition-all text-sm font-semibold active:scale-95">
-                  <Plus className="h-4 w-4" /> 新增
-                </button>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {trainingCourses.map((course, index) => {
-                   const total = calculateTrainingRow(course);
-                   return (
-                     <div key={course.id} className="bg-white p-5 rounded-2xl border border-orange-100 shadow-sm flex flex-col gap-4 relative">
-                        <button onClick={() => {const newT = trainingCourses.filter(t => t.id !== course.id); setTrainingCourses(newT)}} className="absolute top-4 right-4 text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
-                        <div className="grid grid-cols-12 gap-3 pr-6">
-                           <div className="col-span-3">
-                             <label className="text-[10px] font-bold text-slate-300 uppercase">学期</label>
-                             <select value={course.semester} onChange={e => {const newT=[...trainingCourses]; newT[index].semester=e.target.value; setTrainingCourses(newT)}} className="w-full text-xs border-slate-200 rounded-lg bg-slate-50"><option>上半年</option><option>下半年</option></select>
-                           </div>
-                           <div className="col-span-9">
-                             <label className="text-[10px] font-bold text-slate-300 uppercase">课程名称</label>
-                             <input type="text" value={course.name} onChange={e => {const newT=[...trainingCourses]; newT[index].name=e.target.value; setTrainingCourses(newT)}} className="w-full text-sm font-bold border-slate-200 rounded-lg" placeholder="实训名称" />
-                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                           <div className="flex-1">
-                             <label className="text-[10px] font-bold text-orange-400 uppercase">实训总课时</label>
-                             <div className="relative">
-                               <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-orange-200" />
-                               <input type="number" value={course.hours} onChange={e => {const newT=[...trainingCourses]; newT[index].hours=e.target.value; setTrainingCourses(newT)}} className="w-full pl-9 text-sm font-bold border-orange-200 rounded-lg focus:ring-orange-500" />
-                             </div>
-                           </div>
-                           <label className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-all w-24 h-[58px] mt-4 ${course.hasGrades ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-white border-slate-200 text-slate-400'}`}>
-                              <input type="checkbox" checked={course.hasGrades} onChange={e => {const newT=[...trainingCourses]; newT[index].hasGrades=e.target.checked; setTrainingCourses(newT)}} className="hidden" />
-                              <CheckSquare className="h-4 w-4 mb-1" />
-                              <span className="text-[10px] font-bold">登记成绩</span>
-                           </label>
-                           <div className="flex flex-col items-end justify-end flex-1 mt-4">
-                              <span className="text-[10px] text-slate-400 uppercase font-bold">工作量</span>
-                              <span className="text-2xl font-black text-orange-600 leading-none">{total.toFixed(1)}</span>
-                           </div>
+
+                        {/* 三、党务及学生管理 */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="p-1.5 bg-red-100 text-red-600 rounded-lg"><Users className="h-5 w-5"/></span>三、党务及学生管理</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[
+                                {l: '班主任管理', k: 'classTeacher'},
+                                {l: '组织学生讲座', k: 'studentLectures'},
+                                {l: '指导社团', k: 'clubGuide'},
+                                {l: '大型学生活动', k: 'largeEvents'},
+                                {l: '宿舍管理', k: 'dormManagement'},
+                                {l: '就创业工作', k: 'employmentWork'},
+                                {l: '党务工作', k: 'partyWork'},
+                                {l: '工会活动', k: 'unionActivity'},
+                            ].map(item => (
+                                <div key={item.k} className="flex flex-col gap-2 bg-slate-50 p-3 rounded-xl hover:shadow-md transition-shadow">
+                                <label className="text-xs font-bold text-slate-500">{item.l}</label>
+                                <input 
+                                    type="number" min="0" placeholder="0"
+                                    value={nonTeaching[item.k]} 
+                                    onChange={e => handleNumericInput(setNonTeaching, item.k, e.target.value)} 
+                                    className="w-full border-slate-200 rounded-lg text-sm focus:border-red-400 focus:ring-red-200" 
+                                />
+                                </div>
+                            ))}
                         </div>
-                     </div>
-                   );
-                 })}
-               </div>
-            </section>
-          </div>
-        )}
+                        </div>
 
-        {/* ================= 2. 非教学工作量 (美化与更新) ================= */}
-        {activeTab === 'non_teaching' && (
-          <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            
-            {/* 一、政治和业务学习 (简化均衡布局) */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-               <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
-                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span className="p-1.5 bg-green-100 text-green-600 rounded-lg"><BookOpen className="h-5 w-5"/></span>
-                    一、政治和业务学习 <span className="text-xs text-slate-400 font-normal ml-2">基准分 20分</span>
-                  </h3>
-               </div>
-               <div className="p-6">
-                  {/* 分为上下两排或网格，使其均衡 */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {/* 因私请假 */}
-                      <div className="p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center gap-2 hover:border-slate-300 transition-colors">
-                         <span className="text-sm font-bold text-slate-600">政治学习缺席</span>
-                         <div className="flex items-center gap-1">
-                           <input 
-                              type="number" min="0" placeholder="0"
-                              value={nonTeaching.polStudyAbsence} 
-                              onChange={e => handleNumericInput(setNonTeaching, 'polStudyAbsence', e.target.value)} 
-                              className="w-16 text-center border-slate-200 rounded-md p-1 font-bold text-slate-700"
-                           />
-                           <span className="text-xs text-slate-400">次</span>
-                         </div>
-                         <span className="text-[10px] text-red-500 bg-red-50 px-2 py-0.5 rounded-full">-0.5分/次</span>
-                      </div>
+                        {/* 四~八、其他分类 */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[
+                            {t: '四、校企合作', k: 'schoolEntCoop', c: 'border-orange-200', bg: 'bg-orange-50', icon: '🤝'},
+                            {t: '五、校外培训创收', k: 'externalTraining', c: 'border-emerald-200', bg: 'bg-emerald-50', icon: '💰'},
+                            {t: '六、部门事务', k: 'deptAffairs', c: 'border-cyan-200', bg: 'bg-cyan-50', icon: '📂'},
+                            {t: '七、其它工作', k: 'otherWork', c: 'border-slate-200', bg: 'bg-slate-50', icon: '📝'},
+                        ].map(sec => (
+                            <div key={sec.k} className={`rounded-xl border p-4 flex justify-between items-center ${sec.c} ${sec.bg}`}>
+                                <div className="flex items-center gap-2">
+                                <span className="text-lg">{sec.icon}</span>
+                                <span className="font-bold text-slate-700">{sec.t}</span>
+                                </div>
+                                <input 
+                                type="number" placeholder="0"
+                                value={nonTeaching[sec.k]} 
+                                onChange={e => handleNumericInput(setNonTeaching, sec.k, e.target.value)} 
+                                className="w-24 border-white/50 bg-white/50 rounded-lg text-right font-bold" 
+                                />
+                            </div>
+                        ))}
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex justify-between items-center md:col-span-2">
+                                <span className="font-bold text-red-700 flex items-center gap-2"><AlertCircle className="h-4 w-4"/> 八、其他教育教学工作量抵扣 (扣分项)</span>
+                                <div className="flex items-center gap-2">
+                                <span className="text-red-400 text-sm font-bold">减去</span>
+                                <input 
+                                    type="number" placeholder="0"
+                                    value={nonTeaching.deductions} 
+                                    onChange={e => handleNumericInput(setNonTeaching, 'deductions', e.target.value)} 
+                                    className="w-24 border-red-200 text-red-600 rounded-lg text-right font-bold focus:ring-red-500" 
+                                />
+                                </div>
+                        </div>
+                        </div>
 
-                      {/* 会议缺席 */}
-                      <div className="p-4 rounded-xl border border-red-200 bg-red-50/30 flex flex-col items-center justify-center text-center gap-2">
-                         <span className="text-sm font-bold text-red-700">会议缺席(无故)</span>
-                         <div className="flex items-center gap-1">
-                           <input 
-                              type="number" min="0" placeholder="0"
-                              value={nonTeaching.meetingAbsence} 
-                              onChange={e => handleNumericInput(setNonTeaching, 'meetingAbsence', e.target.value)} 
-                              className="w-16 text-center border-red-200 rounded-md p-1 font-bold text-red-700 bg-white"
-                           />
-                           <span className="text-xs text-red-400">次</span>
-                         </div>
-                         <span className="text-[10px] text-red-600 bg-white px-2 py-0.5 rounded-full">-1分/次</span>
-                      </div>
+                        {/* 非教学总分大卡片 */}
+                        <div className="bg-slate-800 rounded-2xl p-6 text-white flex justify-between items-center shadow-xl shadow-slate-200">
+                        <div>
+                            <h2 className="text-xl font-bold">非教学工作量总计</h2>
+                            <p className="text-slate-400 text-sm">包含所有已填报项目及扣分项</p>
+                        </div>
+                        <div className="text-5xl font-black tracking-tighter">{nonTeachingCategories.total.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    )}
 
-                      {/* 参加会议(一般) */}
-                      <div className="p-4 rounded-xl border border-green-200 bg-green-50/30 flex flex-col items-center justify-center text-center gap-2">
-                         <span className="text-sm font-bold text-green-700">讲座/会议(一般)</span>
-                         <div className="flex items-center gap-1">
-                           <input 
-                              type="number" min="0" placeholder="0"
-                              value={nonTeaching.meetingAttendGeneral} 
-                              onChange={e => handleNumericInput(setNonTeaching, 'meetingAttendGeneral', e.target.value)} 
-                              className="w-16 text-center border-green-200 rounded-md p-1 font-bold text-green-700 bg-white"
-                           />
-                           <span className="text-xs text-green-400">次</span>
-                         </div>
-                         <span className="text-[10px] text-green-600 bg-white px-2 py-0.5 rounded-full">+1分/次</span>
-                      </div>
+                    {/* ================= 3. 数据汇总 ================= */}
+                    {activeTab === 'summary' && (
+                    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                        {/* 用户信息卡片 */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><User className="h-5 w-5 text-indigo-500"/> 教师基本信息</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">工号 (ID)</label>
+                                <input type="text" value={userInfo.employeeId} onChange={e => setUserInfo({...userInfo, employeeId: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="请输入工号" />
+                                </div>
+                                <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">姓名 (Name)</label>
+                                <input type="text" value={userInfo.name} onChange={e => setUserInfo({...userInfo, name: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="请输入姓名" />
+                                </div>
+                                <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">职称 (Title)</label>
+                                <input type="text" value={userInfo.title} onChange={e => setUserInfo({...userInfo, title: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="例如：讲师" />
+                                </div>
+                            </div>
+                        </div>
 
-                       {/* 参加会议(角色) */}
-                      <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 flex flex-col items-center justify-center text-center gap-2">
-                         <span className="text-sm font-bold text-emerald-700">讲座/会议(角色)</span>
-                         <div className="flex items-center gap-1">
-                           <input 
-                              type="number" min="0" placeholder="0"
-                              value={nonTeaching.meetingAttendRole} 
-                              onChange={e => handleNumericInput(setNonTeaching, 'meetingAttendRole', e.target.value)} 
-                              className="w-16 text-center border-emerald-200 rounded-md p-1 font-bold text-emerald-700 bg-white"
-                           />
-                           <span className="text-xs text-emerald-400">次</span>
-                         </div>
-                         <span className="text-[10px] text-emerald-600 bg-white px-2 py-0.5 rounded-full">+0.5分/次</span>
-                      </div>
-                  </div>
-               </div>
-            </div>
+                        {/* 汇总预览 - 教学 */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2"><FileSpreadsheet className="h-4 w-4"/> 教学工作量预览</h3>
+                                <button onClick={() => exportToCSV('teaching')} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 flex items-center gap-1"><Download className="h-3 w-3"/> 导出 Excel</button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-slate-400 uppercase bg-slate-50">
+                                    <tr>
+                                        <th className="px-4 py-3">类型</th>
+                                        <th className="px-4 py-3">课程名称</th>
+                                        <th className="px-4 py-3">班级/项目</th>
+                                        <th className="px-4 py-3 text-right">数值</th>
+                                        <th className="px-4 py-3 text-right">折算工作量</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {courses.map(c => (
+                                        <tr key={c.id}>
+                                            <td className="px-4 py-2 font-medium text-slate-600">理论/实验</td>
+                                            <td className="px-4 py-2">{c.name}</td>
+                                            <td className="px-4 py-2 text-slate-500">{c.className}</td>
+                                            <td className="px-4 py-2 text-right text-slate-400">{c.theoryHours}+{c.labHoursPerBatch}*{c.labBatches}</td>
+                                            <td className="px-4 py-2 text-right font-bold text-slate-800">{calculateRow(c).total.toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                    {trainingCourses.map(c => (
+                                        <tr key={c.id}>
+                                            <td className="px-4 py-2 font-medium text-orange-600">实训</td>
+                                            <td className="px-4 py-2">{c.name}</td>
+                                            <td className="px-4 py-2 text-slate-500">{c.className}</td>
+                                            <td className="px-4 py-2 text-right text-slate-400">{c.hours}课时</td>
+                                            <td className="px-4 py-2 text-right font-bold text-slate-800">{calculateTrainingRow(c).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                    <tr>
+                                        <td className="px-4 py-2 font-medium text-purple-600">毕业设计</td>
+                                        <td className="px-4 py-2" colSpan="3">答辩{gradDesign.defendedCount}人...</td>
+                                        <td className="px-4 py-2 text-right font-bold text-slate-800">{gradTotal.toFixed(2)}</td>
+                                    </tr>
+                                    <tr className="bg-slate-50">
+                                        <td className="px-4 py-2 font-bold" colSpan="4">年度教学总计</td>
+                                        <td className="px-4 py-2 text-right font-black text-indigo-600 text-lg">{(teachingTotal+trainingTotal+gradTotal).toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                                </table>
+                            </div>
+                        </div>
 
-            {/* 二、业务工作 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg"><Briefcase className="h-5 w-5"/></span>二、业务工作</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    {l: '新编课程标准(个)', k: 'newStandards', p: '2分/个'},
-                    {l: '听课评教(次)', k: 'peerReviews', p: '0.5分/次'},
-                    {l: '教学研讨(次)', k: 'teachingSeminars', p: '1分/次'}, 
-                    {l: '指导顶岗实习(人数)', k: 'internshipStudents', p: '0.1分/生'},
-                    {l: '毕业答辩(分)', k: 'gradDefense', p: '填总分'}, // 改为分数
-                    {l: '继续教育/培训(分)', k: 'continuingEd', p: '填总分'},
-                    {l: '线上巡课(分)', k: 'onlinePatrol', p: '填总分'},
-                    {l: '组织竞赛活动(分)', k: 'skillCompOrg', p: '填总分'},
-                    {l: '组织考工(分)', k: 'skillTestOrg', p: '填总分'},
-                    {l: '实训基地建设(分)', k: 'baseConstruction', p: '填总分'},
-                    {l: '教科研过程分', k: 'researchProcess', p: '填总分'},
-                  ].map(item => (
-                    <div key={item.k} className="flex justify-between items-center border border-slate-100 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                       <div className="flex flex-col">
-                         <span className="text-sm font-medium text-slate-700">{item.l}</span>
-                         <span className="text-[10px] text-slate-400">{item.p}</span>
-                       </div>
-                       <input 
-                         type="number" min="0" placeholder="0"
-                         value={nonTeaching[item.k]} 
-                         onChange={e => handleNumericInput(setNonTeaching, item.k, e.target.value)} 
-                         className="w-20 text-center border-slate-200 rounded-lg text-sm font-bold text-indigo-600 focus:ring-indigo-500" 
-                       />
-                    </div>
-                  ))}
-               </div>
-            </div>
+                        {/* 汇总预览 - 非教学 (详细大类) */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2"><FileSpreadsheet className="h-4 w-4"/> 非教学工作量预览</h3>
+                                <button onClick={() => exportToCSV('non_teaching')} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 flex items-center gap-1"><Download className="h-3 w-3"/> 导出 Excel</button>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">一、政治业务学习</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section1.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">二、业务工作</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section2.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">三、党务及学生管理</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section3.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">四、校企合作</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section4.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">五、校外培训创收</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section5.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">六、部门事务</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section6.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">七、其它工作</span>
+                                <span className="font-bold text-slate-800">{nonTeachingCategories.section7.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
+                                <span className="text-slate-600 text-sm">八、抵扣</span>
+                                <span className="font-bold text-red-500">-{nonTeachingCategories.section8.toFixed(2)}</span>
+                                </div>
+                                
+                                <div className="md:col-span-2 flex justify-between items-center pt-4 mt-2 border-t border-slate-100">
+                                <span className="font-bold text-slate-800">年度非教学总计</span>
+                                <span className="font-black text-indigo-600 text-xl">{nonTeachingCategories.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
 
-            {/* 三、党务及学生管理 */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="p-1.5 bg-red-100 text-red-600 rounded-lg"><Users className="h-5 w-5"/></span>三、党务及学生管理</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    {l: '班主任管理', k: 'classTeacher'},
-                    {l: '组织学生讲座', k: 'studentLectures'},
-                    {l: '指导社团', k: 'clubGuide'},
-                    {l: '大型学生活动', k: 'largeEvents'},
-                    {l: '宿舍管理', k: 'dormManagement'},
-                    {l: '就创业工作', k: 'employmentWork'},
-                    {l: '党务工作', k: 'partyWork'},
-                    {l: '工会活动', k: 'unionActivity'},
-                  ].map(item => (
-                    <div key={item.k} className="flex flex-col gap-2 bg-slate-50 p-3 rounded-xl hover:shadow-md transition-shadow">
-                       <label className="text-xs font-bold text-slate-500">{item.l}</label>
-                       <input 
-                        type="number" min="0" placeholder="0"
-                        value={nonTeaching[item.k]} 
-                        onChange={e => handleNumericInput(setNonTeaching, item.k, e.target.value)} 
-                        className="w-full border-slate-200 rounded-lg text-sm focus:border-red-400 focus:ring-red-200" 
-                       />
                     </div>
-                  ))}
-               </div>
-            </div>
+                    )}
+                </main>
 
-            {/* 四~八、其他分类 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {[
-                 {t: '四、校企合作', k: 'schoolEntCoop', c: 'border-orange-200', bg: 'bg-orange-50', icon: '🤝'},
-                 {t: '五、校外培训创收', k: 'externalTraining', c: 'border-emerald-200', bg: 'bg-emerald-50', icon: '💰'},
-                 {t: '六、部门事务', k: 'deptAffairs', c: 'border-cyan-200', bg: 'bg-cyan-50', icon: '📂'},
-                 {t: '七、其它工作', k: 'otherWork', c: 'border-slate-200', bg: 'bg-slate-50', icon: '📝'},
-               ].map(sec => (
-                 <div key={sec.k} className={`rounded-xl border p-4 flex justify-between items-center ${sec.c} ${sec.bg}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{sec.icon}</span>
-                      <span className="font-bold text-slate-700">{sec.t}</span>
-                    </div>
-                    <input 
-                      type="number" placeholder="0"
-                      value={nonTeaching[sec.k]} 
-                      onChange={e => handleNumericInput(setNonTeaching, sec.k, e.target.value)} 
-                      className="w-24 border-white/50 bg-white/50 rounded-lg text-right font-bold" 
-                    />
-                 </div>
-               ))}
-               <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex justify-between items-center md:col-span-2">
-                    <span className="font-bold text-red-700 flex items-center gap-2"><AlertCircle className="h-4 w-4"/> 八、其他教育教学工作量抵扣 (扣分项)</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-400 text-sm font-bold">减去</span>
-                      <input 
-                        type="number" placeholder="0"
-                        value={nonTeaching.deductions} 
-                        onChange={e => handleNumericInput(setNonTeaching, 'deductions', e.target.value)} 
-                        className="w-24 border-red-200 text-red-600 rounded-lg text-right font-bold focus:ring-red-500" 
-                      />
-                    </div>
-               </div>
-            </div>
-
-            {/* 非教学总分大卡片 */}
-            <div className="bg-slate-800 rounded-2xl p-6 text-white flex justify-between items-center shadow-xl shadow-slate-200">
-               <div>
-                 <h2 className="text-xl font-bold">非教学工作量总计</h2>
-                 <p className="text-slate-400 text-sm">包含所有已填报项目及扣分项</p>
-               </div>
-               <div className="text-5xl font-black tracking-tighter">{nonTeachingCategories.total.toFixed(2)}</div>
-            </div>
-          </div>
-        )}
-
-        {/* ================= 3. 数据汇总 ================= */}
-        {activeTab === 'summary' && (
-           <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-              {/* 用户信息卡片 */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><User className="h-5 w-5 text-indigo-500"/> 教师基本信息</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">工号 (ID)</label>
-                      <input type="text" value={userInfo.employeeId} onChange={e => setUserInfo({...userInfo, employeeId: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="请输入工号" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">姓名 (Name)</label>
-                      <input type="text" value={userInfo.name} onChange={e => setUserInfo({...userInfo, name: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="请输入姓名" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">职称 (Title)</label>
-                      <input type="text" value={userInfo.title} onChange={e => setUserInfo({...userInfo, title: e.target.value})} className="w-full border-slate-200 rounded-lg" placeholder="例如：讲师" />
-                    </div>
-                 </div>
-              </div>
-
-              {/* 汇总预览 - 教学 */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><FileSpreadsheet className="h-4 w-4"/> 教学工作量预览</h3>
-                    <button onClick={() => exportToCSV('teaching')} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 flex items-center gap-1"><Download className="h-3 w-3"/> 导出 Excel</button>
-                 </div>
-                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                       <thead className="text-xs text-slate-400 uppercase bg-slate-50">
-                          <tr>
-                             <th className="px-4 py-3">类型</th>
-                             <th className="px-4 py-3">课程名称</th>
-                             <th className="px-4 py-3">班级/项目</th>
-                             <th className="px-4 py-3 text-right">数值</th>
-                             <th className="px-4 py-3 text-right">折算工作量</th>
-                          </tr>
-                       </thead>
-                       <tbody className="divide-y divide-slate-100">
-                          {courses.map(c => (
-                             <tr key={c.id}>
-                                <td className="px-4 py-2 font-medium text-slate-600">理论/实验</td>
-                                <td className="px-4 py-2">{c.name}</td>
-                                <td className="px-4 py-2 text-slate-500">{c.className}</td>
-                                <td className="px-4 py-2 text-right text-slate-400">{c.theoryHours}+{c.labHoursPerBatch}*{c.labBatches}</td>
-                                <td className="px-4 py-2 text-right font-bold text-slate-800">{calculateRow(c).total.toFixed(2)}</td>
-                             </tr>
-                          ))}
-                          {trainingCourses.map(c => (
-                             <tr key={c.id}>
-                                <td className="px-4 py-2 font-medium text-orange-600">实训</td>
-                                <td className="px-4 py-2">{c.name}</td>
-                                <td className="px-4 py-2 text-slate-500">{c.className}</td>
-                                <td className="px-4 py-2 text-right text-slate-400">{c.hours}课时</td>
-                                <td className="px-4 py-2 text-right font-bold text-slate-800">{calculateTrainingRow(c).toFixed(2)}</td>
-                             </tr>
-                          ))}
-                          <tr>
-                             <td className="px-4 py-2 font-medium text-purple-600">毕业设计</td>
-                             <td className="px-4 py-2" colSpan="3">答辩{gradDesign.defendedCount}人...</td>
-                             <td className="px-4 py-2 text-right font-bold text-slate-800">{gradTotal.toFixed(2)}</td>
-                          </tr>
-                          <tr className="bg-slate-50">
-                             <td className="px-4 py-2 font-bold" colSpan="4">年度教学总计</td>
-                             <td className="px-4 py-2 text-right font-black text-indigo-600 text-lg">{(teachingTotal+trainingTotal+gradTotal).toFixed(2)}</td>
-                          </tr>
-                       </tbody>
-                    </table>
-                 </div>
-              </div>
-
-               {/* 汇总预览 - 非教学 (详细大类) */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><FileSpreadsheet className="h-4 w-4"/> 非教学工作量预览</h3>
-                    <button onClick={() => exportToCSV('non_teaching')} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-700 flex items-center gap-1"><Download className="h-3 w-3"/> 导出 Excel</button>
-                 </div>
-                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">一、政治业务学习</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section1.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">二、业务工作</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section2.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">三、党务及学生管理</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section3.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">四、校企合作</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section4.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">五、校外培训创收</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section5.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">六、部门事务</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section6.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">七、其它工作</span>
-                       <span className="font-bold text-slate-800">{nonTeachingCategories.section7.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-1">
-                       <span className="text-slate-600 text-sm">八、抵扣</span>
-                       <span className="font-bold text-red-500">-{nonTeachingCategories.section8.toFixed(2)}</span>
+                {/* 底部悬浮栏 */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] py-4 z-40">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="flex gap-8 text-sm text-slate-600">
+                        <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">年度总工作量</span>
+                        <span className="font-black text-slate-800 text-2xl leading-none">{grandTotal.toFixed(2)}</span>
+                        </div>
                     </div>
                     
-                    <div className="md:col-span-2 flex justify-between items-center pt-4 mt-2 border-t border-slate-100">
-                       <span className="font-bold text-slate-800">年度非教学总计</span>
-                       <span className="font-black text-indigo-600 text-xl">{nonTeachingCategories.total.toFixed(2)}</span>
+                    <button 
+                        className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition shadow-lg hover:shadow-xl flex items-center gap-2 transform active:scale-95" 
+                        onClick={handleSave}
+                    >
+                        <Save className="h-5 w-5" /> 保存数据
+                    </button>
                     </div>
-                 </div>
-              </div>
+                </div>
 
-           </div>
-        )}
-      </main>
+                {/* Toast 提示 */}
+                {showToast && (
+                    <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 z-50">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                    <span className="font-bold">暂存成功！数据已保存至本地。</span>
+                    </div>
+                )}
 
-      {/* 底部悬浮栏 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] py-4 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex gap-8 text-sm text-slate-600">
-             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">年度总工作量</span>
-              <span className="font-black text-slate-800 text-2xl leading-none">{grandTotal.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <button 
-            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition shadow-lg hover:shadow-xl flex items-center gap-2 transform active:scale-95" 
-            onClick={handleSave}
-          >
-            <Save className="h-5 w-5" /> 保存数据
-          </button>
-        </div>
-      </div>
+                </div>
+            );
+        };
 
-      {/* Toast 提示 */}
-      {showToast && (
-        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 z-50">
-           <CheckCircle className="h-5 w-5 text-green-400" />
-           <span className="font-bold">暂存成功！数据已保存至本地。</span>
-        </div>
-      )}
-
-    </div>
-  );
-};
-
-export default WorkloadCalculator;
+        // 渲染到根节点
+        ReactDOM.createRoot(document.getElementById('root')).render(<WorkloadCalculator />);
+    </script>
+</body>
+</html>
